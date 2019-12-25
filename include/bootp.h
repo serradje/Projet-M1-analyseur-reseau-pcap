@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <net/ethernet.h>
+#include <netinet/ip6.h>
 
 #ifdef SUPPORT_DHCP
 #define BOOTP_VENDSIZE 312
@@ -64,7 +65,8 @@ void ethernet(const unsigned char *, int);
  * get and display data
  */
 
-void ip(const unsigned char*, int);
+void ipv4(const unsigned char*, int);
+void ipv6(const unsigned char*, int);
 
 /** protocole ARP
  * get and display data
@@ -82,7 +84,7 @@ void udp(const unsigned char*, int);
  * get and display data
  */
  
-void tcp(const unsigned char*, unsigned char, int);
+void tcp(const unsigned char*, unsigned int, int);
 
 /** application BOOTP
  * get and display data

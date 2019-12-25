@@ -77,7 +77,7 @@ void udp(const unsigned char *packet, int verbose) {
 
 
 // gestion des paquets tcp
-void tcp(const u_char *packet, unsigned char tcp_size, int verbose) {
+void tcp(const u_char *packet, unsigned int tcp_size, int verbose) {
 	struct tcphdr* tcp = (struct tcphdr*)(packet);
 	int tcphdr_size = tcp->th_off*4;
 

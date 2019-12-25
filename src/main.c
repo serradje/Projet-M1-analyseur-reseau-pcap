@@ -18,7 +18,7 @@
 #include "color.h"
 
 int n;
-pcap_t *handle;
+pcap_t *p = NULL;
 pcap_if_t *alldevs,*cpt;
 
 /** Affiche la syntaxe du programme
@@ -41,13 +41,6 @@ void usage (const char *prog)
     exit(0);		 
 }
 
-
-
-/* Fonction lors de la reception du signal SIGINT */
-static void handler() {
-    pcap_breakloop(handle);
-}
-
 /* Gestion des Paquets */
 void packet_handler(unsigned char *args, const struct pcap_pkthdr *header, const unsigned char *packet) {
 	struct tm *ts;
@@ -56,10 +49,10 @@ void packet_handler(unsigned char *args, const struct pcap_pkthdr *header, const
 	ts = localtime(&(header->ts.tv_sec));
 	strftime(buf, sizeof(buf), FG_LTYELLOW"%a %Y-%m-%d %H:%M:%S %Z"NOCOLOR, ts);
 	if(*args == 1)
-		printf(FG_LTYELLOW"[%d]: "NOCOLOR, n);
+		fprintf(stderr,FG_LTYELLOW"[%d]: "NOCOLOR, n);
 	else
 		
-	printf(FG_LTYELLOW"Packet [%d] : Length %d Bytes, %s\n"NOCOLOR, n,header->len, buf );
+	fprintf(stderr,FG_LTYELLOW"Packet [%d] : Length %d Bytes, %s\n"NOCOLOR, n,header->len, buf );
 	ethernet(packet, *args);
 	printf("\n");
 				
@@ -67,11 +60,25 @@ void packet_handler(unsigned char *args, const struct pcap_pkthdr *header, const
 
 void display_All_devices()
 {
+	char errbuf[PCAP_ERRBUF_SIZE];
 	int i;
+	if( (pcap_findalldevs(&alldevs, errbuf)) == -1)
+	{
+	
+		fprintf(stderr," erron in findall devs\n");
+		exit(1);
+	}
+	printf(FG_LTYELLOW"Interfaces de votre machine:\n"NOCOLOR);
 	for(cpt=alldevs;cpt;cpt=cpt->next)
 	{
-		fprintf(stderr, "%d : %s\n", i++,cpt->name);
+		fprintf(stderr, FG_LTWHITE"%d : %s\n"NOCOLOR, i++,cpt->name);
 	}
+	exit(0);
+}
+
+/* Fonction lors de la reception du signal SIGINT */
+static void handler() {
+    pcap_breakloop(p);
 }
 
 int main(int argc, char *argv[])
@@ -105,9 +112,10 @@ int main(int argc, char *argv[])
 				v = atoi(optarg);
 				if(v != 1 && v != 2 && v != 3)
 				{
-					verbose = 2;
+					fprintf(stderr,FG_LTWHITE"\nniveau de verbosité doit être compris entre <1..3>\n"NOCOLOR);
+					verbose = 3;
 					fprintf(stderr,FG_LTYELLOW"-v <1..3> : niveau de verbosité (1=très concis ; 2=synthétique ; 3=complet)\n"
-									"\tLa Verbositée par Default [2=synthétique] va être appliquer...\n\n"NOCOLOR);
+									"\tLa Verbositée par Default [3=complet] va être appliquer...\n\n"NOCOLOR);
 					sleep(3);
 				}
 				else 
@@ -125,9 +133,8 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	
 	// pas d'interface? l'interface par defaut est selctionnée
-	if(dev == NULL) { //TODO can be deleted
+	if(dev == NULL) {
 		dev = pcap_lookupdev(errbuf);
 		if (dev == NULL) {
 			fprintf(stderr, "Couldn't Find Default Device: %s\n", errbuf);
@@ -144,26 +151,26 @@ int main(int argc, char *argv[])
 
 	if(file == NULL) {
 		// open de la session live
-		handle = pcap_open_live(dev, BUFSIZ, 1, 0, errbuf);
-		if (handle == NULL) {
+		p = pcap_open_live(dev, BUFSIZ, 1, 0, errbuf);
+		if (p == NULL) {
 			fprintf(stderr, "Couldn't Open Device %s: %s\n", dev, errbuf);
 			return -1;
 		}
 		// gestion de filter
 		if(filter != NULL) {
-			if (pcap_compile(handle, &fp, filter, 0, net) == -1) {
-				fprintf(stderr, "Couldn't parse filter %s: %s\n", filter, pcap_geterr(handle));
+			if (pcap_compile(p, &fp, filter, 0, net) == -1) {
+				fprintf(stderr, "Couldn't parse filter %s: %s\n", filter, pcap_geterr(p));
 				return -1;
 			}
-			if (pcap_setfilter(handle, &fp) == -1) {
-				fprintf(stderr, "Couldn't install filter %s: %s\n", filter, pcap_geterr(handle));
+			if (pcap_setfilter(p, &fp) == -1) {
+				fprintf(stderr, "Couldn't install filter %s: %s\n", filter, pcap_geterr(p));
 				return -1;
 			}
 		}
 	}
 	else {
-		handle = pcap_open_offline(file, errbuf);
-		if (handle == NULL) {
+		p = pcap_open_offline(file, errbuf);
+		if (p == NULL) {
 			fprintf(stderr, "Couldn't open the file %s: %s\n", file, errbuf);
 			return -1;
 		}
@@ -173,9 +180,9 @@ int main(int argc, char *argv[])
 	printf(FG_LTYELLOW"Interface sélectionnée par Défault: %s\n\n"NOCOLOR, dev);
 
 	// boucle sur les paquets
-	pcap_loop(handle, -1, packet_handler, (u_char*)&verbose);
+	pcap_loop(p, -1, packet_handler, (u_char*)&verbose);
 	printf(FG_LTYELLOW"\n\n%d packet captured\n"NOCOLOR, n);
 	// fermeture de la session
-	pcap_close(handle);
+	pcap_close(p);
 	return 0;
 }

@@ -1,21 +1,42 @@
 #include <pcap.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
+#include <netinet/if_ether.h>
+#include <netinet/ether.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 
 #include "bootp.h"
 #include "color.h"
 
+
+/*void ip(const unsigned char * packet,int verbose){*/
+/*	//TEST POUR IPv4 ou IPv6*/
+/*	const struct ether_header * ethernet = (struct ether_header *) (packet);*/
+/*	struct ip *ip = (struct ip*)packet;*/
+/*	if(ip->ip_v == 4)*/
+/*	{*/
+/*		ipv4(packet,verbose);*/
+/*	}*/
+/*	else*/
+/*	{*/
+/*		ipv6(packet,verbose);*/
+/*	}*/
+
+/*}*/
+
 // gestion des paquets IPv4
-void ip(const unsigned char *packet, int verbose) {
+void ipv4(const unsigned char *packet, int verbose) {
 	struct ip *ip = (struct ip*)packet;
 	int ip_size = 4*ip->ip_hl;
 
 	void (*next_udp)(const u_char*, int) = NULL;
-	void (*next_tcp)(const u_char*, int, int) = NULL;
+	void (*next_tcp)(const u_char*, unsigned int, int) = NULL;
 
 	if(verbose == 2 || verbose == 3) 
 	{
@@ -133,6 +154,75 @@ void ip(const unsigned char *packet, int verbose) {
 		(*next_tcp)(packet + ip_size, ntohs(ip->ip_len) - ip_size, verbose);
 }
 
+void ipv6(const unsigned char *packet, int verbose) {
+	struct ip6_hdr *ip6 = (struct ip6_hdr *) (packet + sizeof(struct ether_header));
+	//int ip6_size = (sizeof(struct ether_header));
+	
+	void (*next_udp)(const u_char*, int) = NULL;
+	void (*next_tcp)(const u_char*, unsigned int, int) = NULL;
+	
+	char * src = (char *) malloc((INET6_ADDRSTRLEN + 1) * sizeof(char));
+  char * dst = (char *) malloc((INET6_ADDRSTRLEN + 1) * sizeof(char));
+  if (src == NULL )
+  {
+ 	 fprintf(stderr,"error malloc @src\n");
+ 	 exit(1);
+  }
+   if (dst == NULL )
+   {
+ 	 fprintf(stderr,"error malloc @dst\n");
+ 	 exit(1);
+  }
+  if(inet_ntop(AF_INET6, &ip6->ip6_src, src, INET6_ADDRSTRLEN) == NULL)
+  {
+		fprintf(stderr,"error inet_ntop\n");
+		exit(1);
+	}
+  if(inet_ntop(AF_INET6, &ip6->ip6_dst, dst, INET6_ADDRSTRLEN) == NULL)
+  {
+		fprintf(stderr,"error inet_ntop\n");
+		exit(1);
+	}
+  
+    // Affichage Information IPv6
+  switch(verbose)
+  {
+    case 1:
+      printf("[IPv6] @src: %s -> @dst: %s ", src, dst);
+      break;
+    case 2|3:
+    	printf(FG_LTYELLOW"\t#### IPv6 ####\n"NOCOLOR);
+      printf(FG_RED"Version: "NOCOLOR);
+      printf(FG_LTWHITE"6\n"NOCOLOR);
+      printf(FG_RED"Traffic Class: "NOCOLOR);
+      printf(FG_LTWHITE"%u\n"NOCOLOR, (ip6->ip6_flow << 4) >> 20);
+      printf(FG_RED"Flow: "NOCOLOR);
+      printf(FG_LTWHITE"%u\n"NOCOLOR, ntohs(ip6->ip6_flow << 12));
+      printf(FG_RED"Payload length: "NOCOLOR);
+      printf(FG_LTWHITE"%u bytes\n"NOCOLOR, ntohs(ip6->ip6_plen));
+      printf(FG_RED"Hop limit: "NOCOLOR);
+      printf(FG_LTWHITE"%u\n"NOCOLOR, ip6->ip6_hlim);
+      printf(FG_RED"Source: "NOCOLOR);
+      printf(FG_LTWHITE"%s\n"NOCOLOR,src);
+      printf(FG_RED"Destination: "NOCOLOR);
+      printf(FG_LTWHITE"%s\n"NOCOLOR,dst);
+      break;
+    default:
+      break;
+  }
+
+	if(next_udp != NULL)
+		(*next_udp)(packet, verbose);
+	else if(next_tcp != NULL)
+		(*next_tcp)(packet, ntohs(ip6->ip6_plen) - (sizeof(struct ip6_hdr)), verbose);
+		
+	free(src);
+	free(dst);
+}
+
+
+
+
 // gestion des paquets ethernet
 void ethernet(const unsigned char *packet, int verbose) 
 {
@@ -172,10 +262,11 @@ void ethernet(const unsigned char *packet, int verbose)
 		switch(ntohs(ethernet->ether_type)) {
 			case ETHERTYPE_IP:
 				printf(FG_LTWHITE"IPv4: "NOCOLOR);
-				next_layer = ip;
+				next_layer = ipv4;
 				break;
 			case ETHERTYPE_IPV6:
 				printf(FG_LTWHITE"IPv6 "NOCOLOR);
+				next_layer = ipv6;
 				break;
 			case ETHERTYPE_ARP:
 				printf(FG_LTWHITE"ARP "NOCOLOR);
@@ -202,7 +293,7 @@ void ethernet(const unsigned char *packet, int verbose)
 			ethernet->ether_shost[5]);
 
 		printf(FG_MAGENTA"@dst : "NOCOLOR);
-		printf(FG_LTWHITE"%02x:%02x:%02x:%02x:%02x:%02x -> "NOCOLOR, 
+		printf(FG_LTWHITE"%02x:%02x:%02x:%02x:%02x:%02x"NOCOLOR, 
 			ethernet->ether_dhost[0],
 			ethernet->ether_dhost[1],
 			ethernet->ether_dhost[2],
@@ -212,7 +303,10 @@ void ethernet(const unsigned char *packet, int verbose)
 
 		switch(ntohs(ethernet->ether_type)) {
 			case ETHERTYPE_IP:
-				next_layer = ip;
+				next_layer = ipv4;
+				break;
+			case ETHERTYPE_IPV6:
+				next_layer = ipv6;
 				break;
 			case ETHERTYPE_ARP:
 				next_layer = arp;

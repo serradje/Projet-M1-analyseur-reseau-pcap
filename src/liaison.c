@@ -10,7 +10,11 @@
 #include "color.h"
 
 
-// gestion des paquets ARP
+/** fonction arp(...): gestions et analyse des paquets arp
+ * @param packet: pointeur vers le octet de champ arp
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return: 
+ */
 void arp(const unsigned char *packet, int verbose) {
 	struct arphdr *arp = (struct arphdr*)packet;
 	int arp_size = sizeof(struct arphdr);
@@ -106,7 +110,7 @@ void arp(const unsigned char *packet, int verbose) {
 			arpaddr->ar_spa[2],
 			arpaddr->ar_spa[3]
 		);
-		printf(FG_RED"\tTarget hardware address: ");
+		printf(FG_RED"\tTparamet hardware address: ");
 		printf(FG_LTWHITE"%02x:%02x:%02x:%02x:%02x:%02x\n"NOCOLOR, 
 			arpaddr->ar_tha[0],
 			arpaddr->ar_tha[1],		

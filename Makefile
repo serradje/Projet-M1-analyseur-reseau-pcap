@@ -27,4 +27,4 @@ clean :
 	rm -rf obj/*.o bin/* analyseur include/*.gch
 		
 archive :
-	tar -f Analyseur_Reseau_Serradj_Elhadi.tar.gz -cvz src/*.c include/*.h Makefile rapport.pdf bin/ obj/
+	tar -f Analyseur_Reseau_Serradj_Elhadi.tar.gz -cvz src/*.c include/*.h Makefile README.md bin/ obj/

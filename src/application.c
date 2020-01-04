@@ -7,7 +7,12 @@
 #include "color.h"
 
 
-// gestion des paquets bootp / dhcp
+/** fonction bootp(...): gestions et analyse des paquets bootp/DHCP
+ * @param packet: pointeur vers le octet de champ bootp/DHCP
+ * @param data_size: taille de données
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return: 
+ */
 
 void bootp(const unsigned char *packet, int data_size, int verbose) {
 	struct bootphdr *bootp;
@@ -227,7 +232,7 @@ void bootp(const unsigned char *packet, int data_size, int verbose) {
 						i+=k-1;
 						printf("\n");
 						break;	
-					case 54: // length 4
+					case 54:
 						printf(FG_LTWHITE"DHCP Server Identifier "NOCOLOR);
 						i++;
 						k = (int)packet[i];
@@ -239,7 +244,7 @@ void bootp(const unsigned char *packet, int data_size, int verbose) {
 							packet[i+3]);
 						i+=k-1;				
 						break;
-					case 55: // length variable
+					case 55:
 						printf(FG_LTWHITE"Parameter Request List : "NOCOLOR);
 						i++;
 						for(j=0;j<(int)packet[i];j++) {
@@ -411,7 +416,12 @@ void bootp(const unsigned char *packet, int data_size, int verbose) {
 }
 
 
-// gestion des paquets dns
+/** fonction dns(...): gestions et analyse des paquets dns
+ * @param packet: pointeur vers le octet de champ dns
+ * @param data_size: taille de données
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return : 
+ */
 void dns(const unsigned char *packet, int data_size, int verbose) {
 	struct _dnshdr *dns = (struct _dnshdr*)(packet);
 	int i, j = 0, k, questions, answers;
@@ -448,14 +458,12 @@ void dns(const unsigned char *packet, int data_size, int verbose) {
 			printf(FG_CYAN"\t\t\tQueries:\n"NOCOLOR);
 			for(k = 0; k < questions; k++) {
 				printf("\t\t\t   ");
-				for(i = sizeof(struct _dnshdr) + j; i < data_size && packet[i] != 0x00; i++) {
-/*					if(packet[i] == 0x03)*/
-/*						printf(FG_LTWHITE"."NOCOLOR);*/
-					/*else*/ if(packet[i] != 0x0c) {
+				for(i = sizeof(struct _dnshdr) + j; i < data_size && packet[i] != 0x00; i++) 
+				{
+
+					if(packet[i] != 0x0c) {
 						if(isprint(packet[i]))
 							printf(FG_LTWHITE"%c"NOCOLOR, packet[i]);
-/*						else*/
-/*							printf(FG_LTWHITE"."NOCOLOR);*/
 					}
 				}
 				j = i+1;
@@ -559,9 +567,7 @@ void dns(const unsigned char *packet, int data_size, int verbose) {
 
 					j += ntohs(*d_size);
 				}
-
 			}
-
 			printf("\n");
 		}
 	}
@@ -576,10 +582,14 @@ void dns(const unsigned char *packet, int data_size, int verbose) {
 }
 
 
-// gestion des paquets http
+/** fonction http(...): gestions et analyse des paquets http
+ * @param packet: pointeur vers le octet de champ http
+ * @param data_size: taille de données
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return: 
+ */
 void http(const unsigned char *packet, int data_size, int verbose) {
 	int i;
-
 
 	if(verbose == 2 || verbose == 3) {
 		printf(FG_LTYELLOW"\t\t\t#### HTTP ####\n"NOCOLOR);
@@ -615,7 +625,12 @@ void http(const unsigned char *packet, int data_size, int verbose) {
 	}
 }
 
-// gestion des paquets ftp
+/** fonction ftp(...): gestions et analyse des paquets ftp
+ * @param packet: pointeur vers le octet de champ ftp
+ * @param data_size: taille de données
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return : 
+ */
 void ftp(const unsigned char *packet, int data_size, int verbose) {
 	int i;
 
@@ -645,7 +660,13 @@ void ftp(const unsigned char *packet, int data_size, int verbose) {
 
 }
 
-// gestion des paquets smtp
+
+/** fonction smtp(...): gestions et analyse des paquets smtp
+ * @param packet: pointeur vers le octet de champ SMTP
+ * @param data_size: taille de données
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return : 
+ */
 void smtp(const unsigned char *packet, int data_size, int verbose) {
 	int i;
 
@@ -677,7 +698,13 @@ void smtp(const unsigned char *packet, int data_size, int verbose) {
 
 }
 
-// gestion des paquets pop
+
+/** fonction pop(...): gestions et analyse des paquets pop
+ * @param packet: pointeur vers le octet de champ pop
+ * @param data_size: taille de données
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return : 
+ */
 void pop(const unsigned char *packet, int data_size, int verbose) {
 	int i;
 
@@ -710,7 +737,12 @@ void pop(const unsigned char *packet, int data_size, int verbose) {
 	}
 }
 
-// gestion des paquets imap
+/** fonction imap(...): gestions et analyse des paquets imap
+ * @param packet: pointeur vers le octet de champ imap
+ * @param data_size: taille de données
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return : 
+ */
 void imap(const unsigned char *packet, int data_size, int verbose) {
 	int i;
 
@@ -743,7 +775,13 @@ void imap(const unsigned char *packet, int data_size, int verbose) {
 	}	
 }
 
-// gestion des paquets telnet
+
+/** fonction telnet(...): gestions et analyse des paquets telnet
+ * @param packet: pointeur vers le octet de champ telnet
+ * @param data_size: taille de données
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return : 
+ */
 void telnet(const unsigned char *packet, int data_size, int verbose) {
 	int i = 0, j = 1;
 

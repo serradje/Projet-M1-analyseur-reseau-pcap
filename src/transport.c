@@ -10,8 +10,11 @@
 #include "color.h"
 
 
-
-// gestion des paquets udp
+/** fonction udp(...): gestions et analyse de paquets UDP'
+ * @param packet: Pointeur vers le octet de champ UDP
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return: 
+ */
 void udp(const unsigned char *packet, int verbose) {
 	struct udphdr* udp = (struct udphdr*)(packet);
 	int udp_size = sizeof(struct udphdr);
@@ -75,8 +78,11 @@ void udp(const unsigned char *packet, int verbose) {
 		(*next_layer)(packet + udp_size, (int)(ntohs(udp->uh_ulen) - udp_size), verbose);
 }
 
-
-// gestion des paquets tcp
+/** fonction tcp(...): gestions et analyse de paquets TCP
+ * @param packet: Pointeur vers le octet de champ TCP
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return: 
+ */
 void tcp(const u_char *packet, unsigned int tcp_size, int verbose) {
 	struct tcphdr* tcp = (struct tcphdr*)(packet);
 	int tcphdr_size = tcp->th_off*4;
@@ -121,8 +127,11 @@ void tcp(const u_char *packet, unsigned int tcp_size, int verbose) {
 	if(next_layer == NULL) 
 	{
 		switch(ntohs(tcp->th_dport)) {
-			case 80:
-				next_layer = http;
+			case 20:
+				next_layer = ftp;
+				break;
+			case 21:
+				next_layer = ftp;
 				break;
 			case 23:
 				next_layer = telnet;
@@ -130,17 +139,14 @@ void tcp(const u_char *packet, unsigned int tcp_size, int verbose) {
 			case 25:
 				next_layer = smtp;
 				break;
+			case 80:
+				next_layer = http;
+				break;
 			case 110:
 				next_layer = pop;
 				break;
 			case 143:
 				next_layer = imap;
-				break;
-			case 20:
-				next_layer = ftp;
-				break;
-			case 21:
-				next_layer = ftp;
 				break;
 		}		
 	}
@@ -148,19 +154,19 @@ void tcp(const u_char *packet, unsigned int tcp_size, int verbose) {
 	if(verbose == 2 || verbose == 3)
 	 {
 		printf(FG_GREEN"\t\tSequence number:"NOCOLOR);
-		printf(FG_LTWHITE" %u (0x%x)\n"NOCOLOR, ntohs(tcp->th_seq), ntohl(tcp->th_seq));
+		printf(FG_LTWHITE" %u (0x%x)\n"NOCOLOR,ntohs(tcp->th_seq), ntohl(tcp->th_seq));
 		
 		printf(FG_GREEN"\t\tAcknowledgment number:"NOCOLOR);
-		printf(FG_LTWHITE" %u (0x%x)\n"NOCOLOR, ntohs(tcp->th_ack), ntohl(tcp->th_ack));
+		printf(FG_LTWHITE" %u (0x%x)\n"NOCOLOR,ntohs(tcp->th_ack), ntohl(tcp->th_ack));
 		
 		printf(FG_GREEN"\t\tHeader length:"NOCOLOR);
-		printf(FG_LTWHITE" %d bytes\n"NOCOLOR, tcphdr_size);
+		printf(FG_LTWHITE" %d bytes\n"NOCOLOR,tcphdr_size);
 	}
 
 	if(verbose == 3)
 	{
 		printf(FG_GREEN"\t\tFlags: "NOCOLOR);
-		printf(FG_LTWHITE"(0x%02x) "NOCOLOR, tcp->th_flags);
+		printf(FG_LTWHITE"(0x%02x) "NOCOLOR,tcp->th_flags);
 	}
 	else if(verbose == 2)
 		printf(FG_GREEN"\t\tFlags: "NOCOLOR);
@@ -276,7 +282,6 @@ void tcp(const u_char *packet, unsigned int tcp_size, int verbose) {
 		}
 	}
 
-	// si verbose 1
 	if(verbose == 1) {
 		printf(FG_BLUE"\t\t\t\t\t\t\t\t     |_[TCP] Source port: "NOCOLOR);
 		printf(FG_LTWHITE"%d -> "NOCOLOR,ntohs(tcp->th_sport));

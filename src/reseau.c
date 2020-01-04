@@ -14,23 +14,11 @@
 #include "bootp.h"
 #include "color.h"
 
-
-/*void ip(const unsigned char * packet,int verbose){*/
-/*	//TEST POUR IPv4 ou IPv6*/
-/*	const struct ether_header * ethernet = (struct ether_header *) (packet);*/
-/*	struct ip *ip = (struct ip*)packet;*/
-/*	if(ip->ip_v == 4)*/
-/*	{*/
-/*		ipv4(packet,verbose);*/
-/*	}*/
-/*	else*/
-/*	{*/
-/*		ipv6(packet,verbose);*/
-/*	}*/
-
-/*}*/
-
-// gestion des paquets IPv4
+/** fonction ipv4(...): gestions et analyse de l'entête IP'
+ * @param packet: pointeur vers le octet de champ ipv4
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return: 
+ */
 void ipv4(const unsigned char *packet, int verbose) {
 	struct ip *ip = (struct ip*)packet;
 	int ip_size = 4*ip->ip_hl;
@@ -127,33 +115,18 @@ void ipv4(const unsigned char *packet, int verbose) {
 		} 		
 	}
 
-	// si verbose 3 affichage des options
-/*	if(verbose == 3) {*/
-/*		if(ip->ip_hl > 5) {*/
-/*			printf("\tOptions:\n");*/
-/*			for(i = sizeof(struct ip); i < ip_size && packet[i] != 0x00; i++) {*/
-/*				switch(packet[i]) {*/
-/*					default:*/
-/*						printf("\t  Type: %d\n", packet[i]);*/
-/*						printf("\t  Length %d\n", packet[i+1]);*/
-/*						printf("\t  Value 0x");*/
-/*						for(j=2; j<(int)packet[i+1];j++) {*/
-/*							printf("%02x", packet[i+j+1]);*/
-/*						}*/
-/*						printf("\n");*/
-/*						i+=(int)packet[i+1];*/
-/*						break;*/
-/*				}		*/
-/*			}*/
-/*		}*/
-/*	}*/
-
 	if(next_udp != NULL)
 		(*next_udp)(packet + ip_size, verbose);
 	else if(next_tcp != NULL)
 		(*next_tcp)(packet + ip_size, ntohs(ip->ip_len) - ip_size, verbose);
 }
 
+
+/** fonction ipv6(...): gestions et analyse de l'entête IP'
+ * @param packet: pointeur vers le octet de champ ipv6
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return: 
+ */
 void ipv6(const unsigned char *packet, int verbose) {
 	struct ip6_hdr *ip6 = (struct ip6_hdr *) (packet + sizeof(struct ether_header));
 	//int ip6_size = (sizeof(struct ether_header));
@@ -184,13 +157,23 @@ void ipv6(const unsigned char *packet, int verbose) {
 		exit(1);
 	}
   
-    // Affichage Information IPv6
   switch(verbose)
   {
     case 1:
       printf("[IPv6] @src: %s -> @dst: %s ", src, dst);
       break;
-    case 2|3:
+    case 2:
+    	printf(FG_LTYELLOW"\t#### IPv6 ####\n"NOCOLOR);
+      printf(FG_RED"Version: "NOCOLOR);
+      printf(FG_LTWHITE"6\n"NOCOLOR);
+      printf(FG_RED"Traffic Class: "NOCOLOR);
+      printf(FG_LTWHITE"%u\n"NOCOLOR, (ip6->ip6_flow << 4) >> 20);
+      printf(FG_RED"Source: "NOCOLOR);
+      printf(FG_LTWHITE"%s\n"NOCOLOR,src);
+      printf(FG_RED"Destination: "NOCOLOR);
+      printf(FG_LTWHITE"%s\n"NOCOLOR,dst);
+      break;
+    case 3:
     	printf(FG_LTYELLOW"\t#### IPv6 ####\n"NOCOLOR);
       printf(FG_RED"Version: "NOCOLOR);
       printf(FG_LTWHITE"6\n"NOCOLOR);
@@ -223,22 +206,26 @@ void ipv6(const unsigned char *packet, int verbose) {
 
 
 
-// gestion des paquets ethernet
+/** fonction http(...): gestions et analyse des paquets ethernet
+ * @param packet: pointeur vers le octet de champ http
+ * @param data_size: taille de données
+ * @param verbose: 1=très concis ; 2=synthétique ; 3=complet
+ * @return: 
+ */
 void ethernet(const unsigned char *packet, int verbose) 
 {
 	struct ether_header *ethernet;
 	ethernet = (struct ether_header*)(packet);
 	int len = sizeof(struct ether_header);
 
-	// pointeur sur la fonction de la prochaine couche
+
 	void (*next_layer)(const unsigned char*, int) = NULL;
 
-	// si verbosité 2 et 3
+
 	if((verbose == 2 )|| (verbose == 3)) 
 	{
 		printf(FG_LTYELLOW"\n#### Ethernet ####\n"NOCOLOR);
 
-		// @ src
 		printf(FG_MAGENTA"Source: "NOCOLOR);
 		printf(FG_LTWHITE"%02x:%02x:%02x:%02x:%02x:%02x\n"NOCOLOR, 
 			ethernet->ether_shost[0],
@@ -247,7 +234,7 @@ void ethernet(const unsigned char *packet, int verbose)
 			ethernet->ether_shost[3],
 			ethernet->ether_shost[4],
 			ethernet->ether_shost[5]);
-		// @ dst
+		
 		printf(FG_MAGENTA"Destination: "NOCOLOR);
 		printf(FG_LTWHITE"%02x:%02x:%02x:%02x:%02x:%02x\n"NOCOLOR,
 			ethernet->ether_dhost[0],
@@ -256,8 +243,7 @@ void ethernet(const unsigned char *packet, int verbose)
 			ethernet->ether_dhost[3],
 			ethernet->ether_dhost[4],
 			ethernet->ether_dhost[5]);
-
-		// type du protocole 
+ 
 		printf(FG_MAGENTA"Type: "NOCOLOR);
 		switch(ntohs(ethernet->ether_type)) {
 			case ETHERTYPE_IP:
@@ -276,7 +262,7 @@ void ethernet(const unsigned char *packet, int verbose)
 				printf(FG_LTWHITE"Unknown "NOCOLOR);
 				break;
 		}
-
+		
 		if(verbose == 3)
 			printf(FG_LTWHITE"(0x%04x)\n"NOCOLOR, ntohs(ethernet->ether_type));
 		else

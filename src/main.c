@@ -21,7 +21,7 @@ int n;
 pcap_t *p = NULL;
 pcap_if_t *alldevs,*cpt;
 
-/** Affiche la syntaxe du programme
+/** usage(): Affiche la syntaxe du programme
  * 
  * fonctions pour regrouper les messages à un seul endroit.
  * @param prog nom du programme
@@ -31,11 +31,11 @@ pcap_if_t *alldevs,*cpt;
 void usage (const char *prog)
 {
     fprintf (stderr,FG_LTYELLOW"usage: %s ./analyse -i <interface> -o <fichier> -f <filter> -v <1..3>\n" 
+    			"\t-d   : afficher toutes les interfaces\n"
     			"\t-i   : <interface> : interface pour l’analyse live\n"
     			"\t-o   : <fichier> : fichier d’entrée pour l’analyse offline\n"
     			"\t-f   : <filtre> : filtre BPF (optionnel)\n"
     			"\t-v   : <1..3> : niveau de verbosité (1=très concis ; 2=synthétique ; 3=complet)\n"
-					"\t-d	: <display All interfaces>\n"
     			"\t-h   : afficher de l'aide\n"NOCOLOR
     		, prog);/* on affichera ceci l'orsque qu'une erreur dans les arguments surviennent */
     exit(0);		 
@@ -57,7 +57,7 @@ void packet_handler(unsigned char *args, const struct pcap_pkthdr *header, const
 	printf("\n");
 				
 }
-
+ /* Fonction permetant d'afficher toutes les interfaces */
 void display_All_devices()
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -76,7 +76,7 @@ void display_All_devices()
 	exit(0);
 }
 
-/* Fonction lors de la reception du signal SIGINT */
+/* Fonction traitant la reception du signal SIGINT */
 static void handler() {
     pcap_breakloop(p);
 }
@@ -133,56 +133,61 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	// pas d'interface? l'interface par defaut est selctionnée
-	if(dev == NULL) {
+	//pas d'interface? l'interface par defaut est selctionnée
+	if(dev == NULL) 
+	{
 		dev = pcap_lookupdev(errbuf);
-		if (dev == NULL) {
-			fprintf(stderr, "Couldn't Find Default Device: %s\n", errbuf);
-			return -1;
-		}
+		if (dev == NULL) 
+			{
+				fprintf(stderr, "Couldn't Find Default Device: %s\n", errbuf);
+				return -1;
+			}
 	}
 
-	// get du mask
-	if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
+	if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) 
+	{
 		fprintf(stderr, "Couldn't Get Netmask For Device %s: %s\n", dev, errbuf);
 		net = 0;
 		mask = 0;
 	}
 
-	if(file == NULL) {
-		// open de la session live
+	if(file == NULL) 
+	{
 		p = pcap_open_live(dev, BUFSIZ, 1, 0, errbuf);
-		if (p == NULL) {
-			fprintf(stderr, "Couldn't Open Device %s: %s\n", dev, errbuf);
-			return -1;
-		}
-		// gestion de filter
-		if(filter != NULL) {
-			if (pcap_compile(p, &fp, filter, 0, net) == -1) {
-				fprintf(stderr, "Couldn't parse filter %s: %s\n", filter, pcap_geterr(p));
-				return -1;
-			}
-			if (pcap_setfilter(p, &fp) == -1) {
-				fprintf(stderr, "Couldn't install filter %s: %s\n", filter, pcap_geterr(p));
-				return -1;
-			}
+			if (p == NULL) 
+				{
+					fprintf(stderr, "Couldn't Open Device %s: %s\n", dev, errbuf);
+					return -1;
+				}
+	
+		if(filter != NULL) 
+		{
+			if (pcap_compile(p, &fp, filter, 0, net) == -1) 
+				{
+					fprintf(stderr, "Couldn't parse filter %s: %s\n", filter, pcap_geterr(p));
+					return -1;
+				}
+			if (pcap_setfilter(p, &fp) == -1) 
+				{
+					fprintf(stderr, "Couldn't install filter %s: %s\n", filter, pcap_geterr(p));
+					return -1;
+				}
 		}
 	}
-	else {
+	else 
+	{
 		p = pcap_open_offline(file, errbuf);
-		if (p == NULL) {
-			fprintf(stderr, "Couldn't open the file %s: %s\n", file, errbuf);
-			return -1;
-		}
+		if (p == NULL) 
+			{
+				fprintf(stderr, "Couldn't open the file %s: %s\n", file, errbuf);
+				return -1;
+			}
 	}
-
-
 	printf(FG_LTYELLOW"Interface sélectionnée par Défault: %s\n\n"NOCOLOR, dev);
 
-	// boucle sur les paquets
 	pcap_loop(p, -1, packet_handler, (u_char*)&verbose);
 	printf(FG_LTYELLOW"\n\n%d packet captured\n"NOCOLOR, n);
-	// fermeture de la session
+
 	pcap_close(p);
 	return 0;
 }
